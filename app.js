@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const fs = require("fs");
 const path = require("path");
 const mustacheExpress = require("mustache-express");
+const db = require("./config/db.js")
 
 // Au debut du fichier
 // Configurations
@@ -41,14 +42,23 @@ server.engine("mustache", mustacheExpress());
 server.use(express.static(path.join(__dirname, "public")));
 
 // Points d'acces
-server.get("/donnees", (req, res) => {
+server.get("/donnees", async (req, res) => {
     // Primeiro teste
     // const test = {email: "fernandafrata@gmail.com"};
 
     // Sera remplace par un fetch ou un appel a la bd
-    const donnees = require("./data/donneesTest.js")
+    //const donnees = require("./data/donneesTest.js");
+
+    const donneesRef = await db.collection("test").get();
+
+    const donneesFinale = [];
+
+    donneesRef.forEach((doc) => {
+        donneesFinale.push(doc.data());
+    });
+
     res.statusCode = 200;
-    res.json(donnees);
+    res.json(donneesFinale);
 });
 
 /**
