@@ -49,7 +49,15 @@ server.get("/donnees", async (req, res) => {
     // Sera remplace par un fetch ou un appel a la bd
     //const donnees = require("./data/donneesTest.js");
 
-    const donneesRef = await db.collection("test").get();
+    console.log(req.query);
+    const direction = req.query["order-direction"];
+    //const limit = req.query.limit;
+    const limit = +req.query["limit"];
+    //o + substitui o parseInt que transforma o numero da URL em string
+    const donneesRef = await db.collection("test").orderBy("user", direction).limit(limit).get();
+    //limite esta limitando a resposta em 2
+    //order by esta ordenando
+    //http://localhost:3301/donnees/?limit=10&order-direction=asc
 
     const donneesFinale = [];
 
