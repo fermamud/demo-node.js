@@ -1,3 +1,4 @@
+// NAO ESQUECER DAS VALIDATIONS E DO MEU TRY E CATCH
 // criar um servidor
 const http = require("http");
 const express = require("express");
@@ -11,26 +12,6 @@ const db = require("./config/db.js")
 // Configurations
 dotenv.config();
 
-// const server = http.createServer((request, response) => {
-//     if (request.method == "GET" && request.url == "/") {
-//         const file = fs.readFileSync('./public/index.html', 'utf-8');
-
-//         response.setHeader('Content-Type', 'text.html');
-//         response.statusCode = 200;
-
-//         response.end(file);
-//     } else {
-//         const file = fs.readFileSync('./public/404.html', 'utf-8');
-
-//         response.setHeader('Content-Type', 'text.html');
-//         response.statusCode = 404;
-
-//         response.end(file);
-//     }
-// });
-
-// na segunda aula
-// para criar um servidor. equivale a linha de cima em comentario
 const server = express();
 
 server.set("views", path.join(__dirname, "views"));
@@ -40,33 +21,53 @@ server.engine("mustache", mustacheExpress());
 // Middlewares
 // Doit etre avant les routes
 server.use(express.static(path.join(__dirname, "public")));
+//Permet d'accepter des body eb Json dans les requetes
+server.use(express.json());
 
 // Points d'acces
 server.get("/donnees", async (req, res) => {
-    // Primeiro teste
-    // const test = {email: "fernandafrata@gmail.com"};
+    try {
+        // Primeiro teste
+        // const test = {email: "fernandafrata@gmail.com"};
 
-    // Sera remplace par un fetch ou un appel a la bd
-    //const donnees = require("./data/donneesTest.js");
+        // Sera remplace par un fetch ou un appel a la bd
+        //const donnees = require("./data/donneesTest.js");
 
-    console.log(req.query);
-    const direction = req.query["order-direction"];
-    //const limit = req.query.limit;
-    const limit = +req.query["limit"];
-    //o + substitui o parseInt que transforma o numero da URL em string
-    const donneesRef = await db.collection("test").orderBy("user", direction).limit(limit).get();
-    //limite esta limitando a resposta em 2
-    //order by esta ordenando
-    //http://localhost:3301/donnees/?limit=10&order-direction=asc
+        console.log(req.query);
+        const direction = req.query["order-direction"] || 'asc';
+        //const limit = req.query.limit;
+        const limit = +req.query["limit"] || 1000;
+        //o + substitui o parseInt que transforma o numero da URL em string
+        const donneesRef = await db.collection("test").orderBy("user", direction).limit(limit).get();
+        //limite esta limitando a resposta em 2
+        //order by esta ordenando
+        //http://localhost:3301/donnees/?limit=10&order-direction=asc
 
-    const donneesFinale = [];
+        const donneesFinale = [];
 
-    donneesRef.forEach((doc) => {
-        donneesFinale.push(doc.data());
+        donneesRef.forEach((doc) => {
+            donneesFinale.push(doc.data());
+        });
+
+        res.statusCode = 200;
+        res.json(donneesFinale);
+    } catch (e) {
+        res.statusCode = 500;
+        
+        res.json({message: "Une erreur est survenue. Meillure chance la prochaine fois."});
+    }
+});
+
+// Na tp para popular a bd mais rapidamente com boucle e procurando o documento dado
+server.post("/donnees/initialiser", (req, res) => {
+    const donneesTest = require("./data/donneesTest.js");
+
+    donneesTest.forEach(async (element) => {
+        await db.collection("test").add(element);
     });
 
     res.statusCode = 200;
-    res.json(donneesFinale);
+    res.json({message: "Donneeés initialisées."});
 });
 
 /**
@@ -90,12 +91,55 @@ server.get("/donnees/:id", (req, res) => {
         res.json({message: "Utilisateur non trouve"});
     }
     res.send(req.params.id);
-
-    // const donnees = require("./data/donneesTest.js")
-    // res.statusCode = 200;
-    // res.json(donnees);
 });
 
+/**
+ * @method POST
+ */
+server.post("/donnees", async (req, res) => {
+    try {
+        const test = req.body;
+
+        // Validation des donnees
+        if (test.user == undefined) {
+            res.statusCode = 400;
+            return res.json({message: "Vous devex fournir un utilizateur."});
+        }
+
+        await db.collection("test").add(test);
+    
+        res.statusCode = 201;
+        res.json(test);
+    } catch (error) {
+        res.statusCode = 500;
+        res.json({message: "erreur"});
+    }
+});
+
+/**
+ * @method DELETE
+ */
+server.delete("/donnees/:id", async (req, res) => {
+    const id = req.params.id;
+
+    const resultat = await db.collection("test").doc(id).delete();
+
+    res.statusCode = 200;
+});
+
+/**
+ * @method PUT
+ */
+server.put("/donnees/:id", async (req, res) => {
+    const id = req.params.id;
+    const donneesModifiees = req.body;
+    // Validation ici
+
+    await db.collection("test").doc(id).update(donneesModifiees);
+
+    res.statusCode = 200;
+    res.json({message: "La donnée aété modifiée."})
+});
 
 // Doit etre la derniere !!
 // Gestion page 404 - requete non trouvee

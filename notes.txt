@@ -1,0 +1,64 @@
+
+Aula 1
+
+- instalamos o npm install dotenv
+- caso apague algo sem querer tipo o node modules, basta fazer npm install para recuperar, pois, o nome da dependencia ja estava salvo no nosso package.json
+- para desinstalar npm uninstall
+
+- manter terminal sempre no folder principal
+- npm init
+
+- npm install --save-dev nodemon
+- npm install express
+
+- criei um .env para criar seguranca no meu servidor
+- control C parar processo no terminal
+
+- criamos a variavel fs e as condicoes do servidor. Alem do folder public.
+- add linha dev nos scripts em package.json
+
+-------------------------------------------
+
+Aula 2
+
+- BD de direito livres do quebec
+- podemos filtrar JSON
+
+- criamos uma nova branch com : git checkout -b cours-2
+- instalar mustach express : npm install mustache-express
+- colocamos tudo em comentario no app.js e estamos usando express
+- para testar online : npm run dev (dev é o nome que eu dei nas dependencias para o nodemon app.js)
+- codigos :
+100 - requete enviada
+200 et plus - tudo esta certo
+400 - eror do usuario
+500 - nos fizemos o erro pq o servidor nao foi bem configurado
+
+--------------------------------------------
+
+Aula 3
+
+*ver notas curso 3 render
+- criamos a db no google
+- npm install firebase-admin na raiz do projeto
+- criamos folder config e o db.js
+
+---------------------------------------------
+
+Aula 4
+
+- para criar uma bd com muita info ao mesmo tempo da pra fazer uma boucle na linha do add do Post
+
+Na TP 
+
+- try catch
+- messagem de erro
+- comentarios
+- estrutura
+- na pagina index.html : as rotas, o que faz o API (render e github) e explicacoes detalhadas para modification, adicao, etc
+- podemos fazer no mesmo doc de aula. Criando uma nova branch e dps mandando pro main na hora de mandar pra ele.
+
+
+
+
+
