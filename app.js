@@ -24,68 +24,101 @@ server.use(express.static(path.join(__dirname, "public")));
 //Permet d'accepter des body eb Json dans les requetes
 server.use(express.json());
 
-// Na tp para popular a bd mais rapidamente com boucle e procurando o documento dado
-server.post("/donnees/initialiser", async (req, res) => {
-    const donneesTest = require("./data/donneesTest.js");
+// Importation de la base de données 'utilisateurs'
+server.post("/utilisateurs/initialiser", (req, res) => {
+    try {
+        const utilisateursTest = require("./data/utilisateursTest.js");
 
-    donneesTest.forEach(async (element) => {
-        await db.collection("test").add(element);
-    });
+        utilisateursTest.forEach(async (element) => {
+            await db.collection("utilisateurs").add(element);
+        });
+    
+        res.statusCode = 200;
+        res.json({message: "Donneeés initialisées."});
+    } catch (e) {
+        res.statusCode = 500;
+        
+        res.json({message: "Une erreur est survenue. L'importation de votre base de données a échoué."});
+    }
+});
 
-    res.statusCode = 200;
-    res.json({message: "Donneeés initialisées."});
+// Importation de la base de données 'films'
+server.post("/donnees/initialiser", (req, res) => {
+    try {
+        const donneesTest = require("./data/donneesTest.js");
+
+        donneesTest.forEach(async (element) => {
+            await db.collection("films").add(element);
+        });
+    
+        res.statusCode = 200;
+        res.json({message: "Donneeés initialisées."});
+    } catch (e) {
+        res.statusCode = 500;
+        
+        res.json({message: "Une erreur est survenue. L'importation de votre base de données a échoué."});
+    }
 });
 
 // Points d'acces
-// server.get("/donnees", async (req, res) => {
-//     try {
-//         console.log(req.query);
-//         const direction = req.query["order-direction"] || 'asc';
-//         //const limit = req.query.limit;
-//         const limit = +req.query["limit"] || 1000;
-//         //o + substitui o parseInt que transforma o numero da URL em string
-//         const donneesRef = await db.collection("test").orderBy("user", direction).limit(limit).get();
-//         //limite esta limitando a resposta em 2
-//         //order by esta ordenando
-//         //http://localhost:3301/donnees/?limit=10&order-direction=asc
+/**
+ * @method GET
+ * Avoir une liste de tous les films
+ */
+server.get("/api/films", async (req, res) => {
+    try {
+        console.log(req.query);
 
-//         const donneesFinale = [];
+        const tri = req.query["tri"] || 'titre';
+        const ordre = req.query["ordre"] || 'asc';
 
-//         donneesRef.forEach((doc) => {
-//             donneesFinale.push(doc.data());
-//         });
 
-//         res.statusCode = 200;
-//         res.json(donneesFinale);
-//     } catch (e) {
-//         res.statusCode = 500;
+        const donneesRef = await db.collection("films").orderBy(tri, ordre).get();
+
+        //http://localhost:3301/api/films/?tri=annee&ordre=asc
         
-//         res.json({message: "Une erreur est survenue. Meillure chance la prochaine fois."});
-//     }
-// });
+        const donneesFinale = [];
+
+        donneesRef.forEach((doc) => {
+            donneesFinale.push(doc.data());
+        });
+
+        res.statusCode = 200;
+        res.json(donneesFinale);
+    } catch (e) {
+        res.statusCode = 500;
+        
+        res.json({message: "Une erreur est survenue. Notre système n'a pas pu récupérer les informations demandées."});
+    }
+});
 
 /**
  * @method GET
  * @params id
- * Permet d'acceder a un utilisateur
+ * Permet d'acceder a un film par l'id
  */
-// server.get("/donnees/:id", (req, res) => {
-//     console.log(req.params.id);
-//     const donnees = require("./data/donneesTest.js")
+server.get("/api/films/:id", async (req, res) => {
+    try {
+        console.log(req.params.id);
+        const id = req.params.id;
 
-//     const utilisateur = donnees.find((element) => {
-//         return element.id == req.params.id;
-//     });
-
-//     if (utilisateur) {
-//         res.statusCode = 200;
-//         res.json(utilisateur);
-//     } else {
-//         res.statusCode = 404;
-//         res.json({message: "Utilisateur non trouve"});
-//     }
-//     res.send(req.params.id);
-// });
+        const film = await db.collection("films").doc(id).get();
+    
+        if (film) {
+            const filmId = film.data();
+            res.statusCode = 200;
+            res.json(filmId);
+        } else {
+            res.statusCode = 404;
+            res.json({message: "Film non trouvé."});
+        }
+        //res.send(req.params.id);
+    } catch (e) {
+        res.statusCode = 500;
+        
+        res.json({message: "Une erreur est survenue. Notre système n'a pas pu récupérer le film avec l'id demandée."});
+    }
+});
 
 /**
  * @method POST
@@ -138,13 +171,13 @@ server.post("/donnees/initialiser", async (req, res) => {
 // Doit etre la derniere !!
 // Gestion page 404 - requete non trouvee
 
-// server.use((req, res) => {
-//     res.statusCode = 404;
+server.use((req, res) => {
+    res.statusCode = 404;
 
-//     res.render("404", { url: req.url});
-// });
+    res.render("404", { url: req.url});
+});
 
-// server.listen(process.env.PORT, () => {
-//     console.log("Le serveur a démarré.")
-// });
+server.listen(process.env.PORT, () => {
+    console.log("Le serveur a démarré.")
+});
 
