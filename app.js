@@ -122,51 +122,74 @@ server.get("/api/films/:id", async (req, res) => {
 
 /**
  * @method POST
+ * Ajoute un nouveau film à la liste de films
  */
-// server.post("/donnees", async (req, res) => {
-//     try {
-//         const test = req.body;
+server.post("/api/films", async (req, res) => {
+    try {
+        const film = req.body;
 
 //         // Validation des donnees
-//         if (test.user == undefined) {
+//         if (film.user == undefined) {
 //             res.statusCode = 400;
 //             return res.json({message: "Vous devex fournir un utilizateur."});
 //         }
 
-//         await db.collection("test").add(test);
+        const nouveauFilm = await db.collection("films").add(film);
     
-//         res.statusCode = 201;
-//         res.json(test);
-//     } catch (error) {
-//         res.statusCode = 500;
-//         res.json({message: "erreur"});
-//     }
-// });
+        res.statusCode = 201;
+        res.json({ message: `Le document avec l'id ${nouveauFilm.id} a été ajouté.` });
 
-/**
- * @method DELETE
- */
-// server.delete("/donnees/:id", async (req, res) => {
-//     const id = req.params.id;
-
-//     const resultat = await db.collection("test").doc(id).delete();
-
-//     res.statusCode = 200;
-// });
+        // {
+        //     "titre": "test",
+        //     "genres": ["tes"],
+        //     "description": "test",
+        //     "annee": "2016",
+        //     "realisation": "Test",
+        //     "titreVignette": "test.jpg"
+        // }
+    } catch (e) {
+        res.statusCode = 500;
+        res.json({message: "Notre système n'a pas pu insérer les données envoyées."});
+    }
+});
 
 /**
  * @method PUT
+ * Modifie le film ayant l'identifiant :id
  */
-// server.put("/donnees/:id", async (req, res) => {
-//     const id = req.params.id;
-//     const donneesModifiees = req.body;
-//     // Validation ici
+server.put("/api/films/:id", async (req, res) => {
+    try {
+            const id = req.params.id;
+            const filmModifiee = req.body;
+            // Validation ici
+        
+            await db.collection("films").doc(id).update(filmModifiee);
+        
+            res.statusCode = 200;
+            res.json({message: "La donnée a été modifiée."})
+    } catch (e) {
+        res.statusCode = 500;
+        res.json({message: "Notre système n'a pas pu modifier les données envoyées."});
+    }
+});
 
-//     await db.collection("test").doc(id).update(donneesModifiees);
+/**
+ * @method DELETE
+ * Supprime le film ayant l'identifiant :id de la base de données.
+ */
+server.delete("/api/films/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const filmDelete = await db.collection("films").doc(id).delete();
+    
+        res.statusCode = 200;
+        res.json({message: `Le document avec l'id ${id} a été supprimé.`});
+    } catch(e) {
+        res.statusCode = 500;
+        res.json({message: "erreur"});
+    }
+});
 
-//     res.statusCode = 200;
-//     res.json({message: "La donnée aété modifiée."})
-// });
 
 // Doit etre la derniere !!
 // Gestion page 404 - requete non trouvee
