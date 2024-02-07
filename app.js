@@ -7,6 +7,8 @@ const fs = require("fs");
 const path = require("path");
 const mustacheExpress = require("mustache-express");
 const db = require("./config/db.js")
+const { check, validationResult } = require("express-validator");
+
 
 // Au debut du fichier
 // Configurations
@@ -139,6 +141,92 @@ server.put("/donnees/:id", async (req, res) => {
 
     res.statusCode = 200;
     res.json({message: "La donnée aété modifiée."})
+});
+
+server.post("/utilisateurs/inscription", [
+        check("courriel").escape().trim().notEmpty().isEmail().normalizeEmail(),
+        check("mdp").escape().trim().notEmpty().isLength({min:8, max:20}).isStrongPassword({minLength:8, minLowercase:1, minNumbers:1, minUppercase:1, minSymbols:1})
+    ], async (req, res) => {
+    // On recupere les infos du body
+        const validation = validationResult(req);
+        if (validation.errors.length > 0) {
+            res.statusCode = 400;
+            return res.json({message: "Données non-conforme."});
+        }
+    // Modo mais longo
+    // const courriel = req.body.courriel;
+    // const mdp = req.body.mdp;
+    const { courriel , mdp } = req.body;
+
+    // On verifie si le courriel existe
+    const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
+    const utilisateurs = [];
+
+    docRef.forEach((doc) => {
+        utilisateurs.push(doc.data());
+    });
+    console.log(utilisateurs);
+    
+    // Si oui, erreur,
+    if (utilisateurs.length > 0) {
+        res.statusCode = 400;
+        return res.json({message: "Le courriel existe déja."});
+    }
+    // On valide/nettoie la donnés
+    // On encrypte le mot de passe
+    // On enregistre
+    // ps.: usamos versao rapida porque chaves e valores tem o mesmo nome
+    const nouvelUtilisateur = { courriel, mdp };
+    await db.collection("utilisateurs").add(nouvelUtilisateur);
+
+    delete nouvelUtilisateur.mdp;
+
+    // On reenvoie true
+    res.statusCode = 200;
+    res.json(nouvelUtilisateur);
+
+    // Bom para testar se estamos entrando aqui, antes de comecar o exercicio
+    // res.json("patate");
+});
+
+server.post("/utilisateurs/connexion", async (req, res) => {
+    // On recupere les infos du body
+    const { courriel , mdp } = req.body;
+
+    // On verifie si le courriel existe
+    const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
+    const utilisateurs = [];
+
+    docRef.forEach((doc) => {
+        utilisateurs.push(doc.data());
+    });
+    console.log(utilisateurs);
+
+    // Si non, erreur,
+    if (utilisateurs.length == 0) {
+        // A pessoa fez uma demanda errada
+        res.statusCode = 400;
+        return res.json({message: "Courriel invalide."});
+    }
+
+    const utilisateurAValider = utilisateurs[0];
+
+    // MAIS TARDE : On encrypte le mot de passe
+
+    // On compare
+    // Si pas pareil, erreur
+    if (utilisateurAValider.mdp !== mdp) {
+        res.statusCode = 400;
+        return res.json({message: "Mot de passe invalide."});
+    }
+
+    // On retourne les infos de l'utilisateur sans le mot de passe
+    res.statusCode = 200;
+    delete utilisateurAValider.mdp;
+    res.json(utilisateurAValider);
+
+    // Bom para testar se estamos entrando aqui
+    // res.json("legume");
 });
 
 // Doit etre la derniere !!
