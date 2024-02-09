@@ -8,6 +8,7 @@ const path = require("path");
 const mustacheExpress = require("mustache-express");
 const db = require("./config/db.js")
 const { check, validationResult } = require("express-validator");
+const bcrypt = require("bcrypt");
 
 
 // Au debut du fichier
@@ -29,6 +30,11 @@ server.use(express.json());
 // Points d'acces
 server.get("/donnees", async (req, res) => {
     try {
+        if (req.headers.authorization !== "patate") {
+            res.statusCode = 401;
+            res.json({message: "Non authorisé."});
+        }
+        console.log(req.headers.authorization);
         // Primeiro teste
         // const test = {email: "fernandafrata@gmail.com"};
 
@@ -56,7 +62,7 @@ server.get("/donnees", async (req, res) => {
     } catch (e) {
         res.statusCode = 500;
         
-        res.json({message: "Une erreur est survenue. Meillure chance la prochaine fois."});
+        req.headers.authorization
     }
 });
 
@@ -143,6 +149,10 @@ server.put("/donnees/:id", async (req, res) => {
     res.json({message: "La donnée aété modifiée."})
 });
 
+
+/**
+ * Section utilizateurs
+ */
 server.post("/utilisateurs/inscription", [
         check("courriel").escape().trim().notEmpty().isEmail().normalizeEmail(),
         check("mdp").escape().trim().notEmpty().isLength({min:8, max:20}).isStrongPassword({minLength:8, minLowercase:1, minNumbers:1, minUppercase:1, minSymbols:1})
@@ -172,11 +182,16 @@ server.post("/utilisateurs/inscription", [
         res.statusCode = 400;
         return res.json({message: "Le courriel existe déja."});
     }
+    
     // On valide/nettoie la donnés
     // On encrypte le mot de passe
+    // Nesse caso definimos o SALT no env., mas tbm tinha a opcao de fazer tours aleatorios. Para usar o SALT aparentemente eh preciso ter um numero minimo de caracteres (ler documentacao)
+    // const hash = await bcrypt.hash(mdp, process.env.SALT);
+    const hash = await bcrypt.hash(mdp, 10);
+
     // On enregistre
     // ps.: usamos versao rapida porque chaves e valores tem o mesmo nome
-    const nouvelUtilisateur = { courriel, mdp };
+    const nouvelUtilisateur = { courriel, "mdp": hash };
     await db.collection("utilisateurs").add(nouvelUtilisateur);
 
     delete nouvelUtilisateur.mdp;
@@ -211,11 +226,11 @@ server.post("/utilisateurs/connexion", async (req, res) => {
 
     const utilisateurAValider = utilisateurs[0];
 
-    // MAIS TARDE : On encrypte le mot de passe
-
     // On compare
     // Si pas pareil, erreur
-    if (utilisateurAValider.mdp !== mdp) {
+    const etsValide = await bcrypt.compare(mdp, utilisateurAValider.mdp);
+
+    if (!etsValide) {
         res.statusCode = 400;
         return res.json({message: "Mot de passe invalide."});
     }
