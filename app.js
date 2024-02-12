@@ -12,20 +12,16 @@ const { check, validationResult } = require("express-validator");
 
 // Configurations
 dotenv.config();
-
 const server = express();
-
 server.set("views", path.join(__dirname, "views"));
 server.set("view engine", "mustache");
 server.engine("mustache", mustacheExpress());
 
 // Middlewares
-// Doit etre avant les routes
 server.use(express.static(path.join(__dirname, "public")));
-//Permet d'accepter des body eb Json dans les requetes
 server.use(express.json());
 
-// Importation de la base de données 'utilisateurs'
+// Importation initial de la base de données 'utilisateurs'
 server.post("/utilisateurs/initialiser", (req, res) => {
     try {
         const utilisateursTest = require("./data/utilisateursTest.js");
@@ -43,7 +39,7 @@ server.post("/utilisateurs/initialiser", (req, res) => {
     }
 });
 
-// Importation de la base de données 'films'
+// Importation initial de la base de données 'films'
 server.post("/donnees/initialiser", (req, res) => {
     try {
         const donneesTest = require("./data/donneesTest.js");
@@ -68,15 +64,22 @@ server.post("/donnees/initialiser", (req, res) => {
  */
 server.get("/api/films", async (req, res) => {
     try {
-        console.log(req.query);
-
-        const tri = req.query["tri"] || 'titre';
-        const ordre = req.query["ordre"] || 'asc';
-
+        // Faire la recherche avec le tri et l'ordre
+        // Definition de tri par default titre
+        //let tri = req.query["tri"] || 'titre';
+        let tri = req.query["tri"] || 'titre';
+        
+        if ((tri != 'titre' && tri != 'annee' && tri != 'realisation') || tri == '' || !tri) {
+            tri = "titre";
+        }
+        
+        // Definition de ordre par default asc
+        let ordre = req.query["ordre"] || 'asc';
+        if ((ordre != 'asc' && ordre != 'desc') || ordre == '' || !ordre) {
+            ordre = "asc";
+        }
 
         const donneesRef = await db.collection("films").orderBy(tri, ordre).get();
-
-        //http://localhost:3301/api/films/?tri=annee&ordre=asc
         
         const donneesFinale = [];
 
@@ -88,7 +91,6 @@ server.get("/api/films", async (req, res) => {
         res.json(donneesFinale);
     } catch (e) {
         res.statusCode = 500;
-        
         res.json({message: "Une erreur est survenue. Notre système n'a pas pu récupérer les informations demandées."});
     }
 });
@@ -100,23 +102,22 @@ server.get("/api/films", async (req, res) => {
  */
 server.get("/api/films/:id", async (req, res) => {
     try {
-        console.log(req.params.id);
+        // Récupérer l'identifiant inséré dans la requête
         const id = req.params.id;
 
+        // Récupérer le film correspondant à l'identifiant saisi
         const film = await db.collection("films").doc(id).get();
-    
-        if (film) {
-            const filmId = film.data();
+        const filmId = film.data();
+
+        if (filmId != undefined && film) {
             res.statusCode = 200;
             res.json(filmId);
         } else {
             res.statusCode = 404;
             res.json({message: "Film non trouvé."});
         }
-        //res.send(req.params.id);
     } catch (e) {
         res.statusCode = 500;
-        
         res.json({message: "Une erreur est survenue. Notre système n'a pas pu récupérer le film avec l'id demandée."});
     }
 });
@@ -125,18 +126,42 @@ server.get("/api/films/:id", async (req, res) => {
  * @method POST
  * Ajoute un nouveau film à la liste de films
  */
-server.post("/api/films", async (req, res) => {
+server.post("/api/films", 
+[
+    check("titre").escape().trim().notEmpty().isString(),
+    check("genres").escape().trim().notEmpty(),
+    check("description").escape().trim().notEmpty().isString(),
+    check("annee").escape().trim().notEmpty().isInt(),
+    check("titreVignette").escape().trim().notEmpty().isString()
+],
+async (req, res) => {
     try {
+        // Après avoir validé chaque champ saisi par l'utilisateur, le code vérifie s'il y a eu des échecs de validation
+        const validation = validationResult(req);
+        console.log(validation);
+        if (validation.errors.length > 0) {
+            res.statusCode = 400;
+            return res.json({message: "Données non-conforme."});
+        }
+
         const film = req.body;
 
-//         // Validation des donnees
-//         if (film.user == undefined) {
-//             res.statusCode = 400;
-//             return res.json({message: "Vous devex fournir un utilizateur."});
-//         }
+        // Récupérer le titre saisi par l'utilisateur
+        const filmTitre = req.body.titre;
 
+        // Avant d'insérer le film saisi par l'utilisateur, le code vérifie si le titre existe déjà dans la base de données
+        const filmExisteDeja = await db.collection("films").where("titre", "==", filmTitre).get(); 
+        console.log(filmExisteDeja);
+
+        // Si le titre existe déjà
+        if (!filmExisteDeja.empty) {
+            res.statusCode = 400;
+            return res.json({ message: "Le titre existe déjà dans la base de données." });
+        }
+
+        // Si le titre n'existe pas, le film peut être ajouté à la base de données
         const nouveauFilm = await db.collection("films").add(film);
-    
+
         res.statusCode = 200;
         res.json({ message: `Le film avec l'id ${nouveauFilm.id} a été ajouté.` });
 
@@ -158,16 +183,42 @@ server.post("/api/films", async (req, res) => {
  * @method PUT
  * Modifie le film ayant l'identifiant :id
  */
-server.put("/api/films/:id", async (req, res) => {
+server.put("/api/films/:id", 
+[
+    check("titre").escape().trim().notEmpty().isString().optional(),
+    check("genres").escape().trim().notEmpty().optional(),
+    check("description").escape().trim().notEmpty().isString().optional(),
+    check("annee").escape().trim().notEmpty().isInt().optional(),
+    check("titreVignette").escape().trim().notEmpty().isString().optional()
+],
+async (req, res) => {
     try {
-            const id = req.params.id;
-            const filmModifiee = req.body;
-            // Validation ici
+        const id = req.params.id;
         
+        // Récupérer le film correspondant à l'identifiant saisi
+        const film = await db.collection("films").doc(id).get();
+        const filmId = film.data();
+        
+        if (filmId != undefined && film) {
+            const filmModifiee = req.body;
+
+            const validation = validationResult(req);
+            console.log(validation);
+            if (validation.errors.length > 0) {
+                res.statusCode = 400;
+                return res.json({message: "Données non-conforme."});
+            }
+            
             await db.collection("films").doc(id).update(filmModifiee);
         
             res.statusCode = 200;
             res.json({message: "La donnée a été modifiée."})
+
+
+        } else {
+            res.statusCode = 404;
+            res.json({message: "Film non trouvé."});
+        }
     } catch (e) {
         res.statusCode = 500;
         res.json({message: "Notre système n'a pas pu modifier les données envoyées."});
@@ -191,7 +242,10 @@ server.delete("/api/films/:id", async (req, res) => {
     }
 });
 
-
+/**
+ * @method POST
+ * Ajoute un nouvel utilisateur
+ */
 server.post("/api/utilisateurs/inscription",
 [
     check("courriel").escape().trim().notEmpty().isEmail().normalizeEmail(),
@@ -236,41 +290,50 @@ async (req, res) => {
 });
 
 
+/**
+ * @method POST
+ * Établir une connexion
+ */
 server.post("/api/utilisateurs/connexion", async (req, res) => {
-    // On recupere les infos du body
-    const { courriel , mdp } = req.body;
-
-    // On verifie si le courriel existe
-    const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
-    const utilisateurs = [];
-
-    docRef.forEach((doc) => {
-        utilisateurs.push(doc.data());
-    });
-    console.log(utilisateurs);
-
-    // Si non, erreur,
-    if (utilisateurs.length == 0) {
-        // A pessoa fez uma demanda errada
-        res.statusCode = 400;
-        return res.json({message: "Courriel invalide."});
+    try {
+        // On recupere les infos du body
+        const { courriel , mdp } = req.body;
+    
+        // On verifie si le courriel existe
+        const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
+        const utilisateurs = [];
+    
+        docRef.forEach((doc) => {
+            utilisateurs.push(doc.data());
+        });
+        console.log(utilisateurs);
+    
+        // Si non, erreur,
+        if (utilisateurs.length == 0) {
+            // A pessoa fez uma demanda errada
+            res.statusCode = 400;
+            return res.json({message: "Courriel invalide."});
+        }
+    
+        const utilisateurAValider = utilisateurs[0];
+    
+        // MAIS TARDE : On encrypte le mot de passe
+    
+        // On compare
+        // Si pas pareil, erreur
+        if (utilisateurAValider.mdp !== mdp) {
+            res.statusCode = 400;
+            return res.json({message: "Mot de passe invalide."});
+        }
+    
+        // On retourne les infos de l'utilisateur sans le mot de passe
+        res.statusCode = 200;
+        delete utilisateurAValider.mdp;
+        res.json({message: `Connexion établie avec l'utilisateur ${utilisateurAValider.courriel}.`});
+    } catch (e) {
+        res.statusCode = 500;
+        res.json({message: "Erreur."});
     }
-
-    const utilisateurAValider = utilisateurs[0];
-
-    // MAIS TARDE : On encrypte le mot de passe
-
-    // On compare
-    // Si pas pareil, erreur
-    if (utilisateurAValider.mdp !== mdp) {
-        res.statusCode = 400;
-        return res.json({message: "Mot de passe invalide."});
-    }
-
-    // On retourne les infos de l'utilisateur sans le mot de passe
-    res.statusCode = 200;
-    delete utilisateurAValider.mdp;
-    res.json({message: `Connexion établie avec l'utilisateur ${utilisateurAValider.courriel}.`});
 });
 
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,64 @@
     <link rel="stylesheet" href="assets/css/styles.css
     ">
 </head>
+
 <body>
-    <h1>Hello world ! Opa</h1>
+    <h1>Documentation de l'API Films</h1>
+    <p>Bienvenue sur l'API Films, un service web en REST créé avec Node.js et Express.js, connecté à une base de données
+        infonuagique sur Firestore de Google Cloud Platform.</p>
+
+    <h2>Utilisation de l'API</h2>
+    <p>Cette API permet d'accéder à une base de données de films ainsi qu'à la gestion des utilisateurs.</p>
+
+    <h2>Routes publiques</h2>
+    <h3>Films</h3>
+    <ul>
+        <li><strong>GET /api/films : </strong>
+            <p>Récupère la liste de tous les films. Possibilité de trier les films par année, par titre et par
+                realisation, de façon ascendante ou descendante, à l'aide des paramètres tri et ordre dans l'URL.</p>
+            <p>Exemple : /api/films?tri=annee&ordre=asc</p>
+            <p>Si aucun tri et aucune ordre ne sont définis, il utilise par défaut un tri par titre et un ordre
+                ascendant.</p>
+            <p>Si vous essayez d'insérer quelque chose de différent des options offertes comme tri, ou de laisser vide
+                ou même de la supprimer, le système doit conserver le titre comme son tri par défaut.</p>
+            <p>De la même manière, si vous essayez d'insérer quelque chose de différent de asc ou desc pour votre ordre
+                ou même de la supprimer, le système doit conserver asc comme son ordre par défaut.</p>
+        </li>
+        <li><strong>GET /api/films/:id </strong>
+            <p>GET /api/films/:id : Récupère les détails du film ayant l'identifiant :id.</p>
+            <p>Si l'identifiant recherché n'existe pas, un message sera renvoyé indiquant que le film n'a pas été
+                trouvé.</p>
+        </li>
+        <li><strong>POST /api/films : </strong>
+            <p>Ajoute un nouveau film à la base de données. Le corps de la requête doit contenir les informations du
+                film à ajouter.</p>
+            <p>Voici un exemple de comment ajouter un film de manière appropriée dans le système :</p>
+            <p>
+                {
+            </p>
+            <p>
+                "titre": "Titre",
+            </p>
+            <p>
+                "genres": ["genre_1", "genre_2"],
+            </p>
+            <p>
+                "description": "Description",
+            </p>
+            <p>
+                "annee": "2016",
+            </p>
+            <p>
+                "realisation": "Realisateur",
+            </p>
+            <p>
+                "titreVignette": "photo.jpg"
+            </p>
+            <p>
+                }
+            </p>
+        </li>
+    </ul>
 </body>
+
 </html>
