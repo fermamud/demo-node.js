@@ -1,5 +1,3 @@
-// NAO ESQUECER DAS VALIDATIONS E DO MEU TRY E CATCH
-
 // Créer un serveur
 const http = require("http");
 const express = require("express");
@@ -66,15 +64,17 @@ server.get("/api/films", async (req, res) => {
     try {
         // Faire la recherche avec le tri et l'ordre
         // Definition de tri par default titre
-        //let tri = req.query["tri"] || 'titre';
         let tri = req.query["tri"] || 'titre';
         
+        // Validation du tri
         if ((tri != 'titre' && tri != 'annee' && tri != 'realisation') || tri == '' || !tri) {
             tri = "titre";
         }
         
         // Definition de ordre par default asc
         let ordre = req.query["ordre"] || 'asc';
+
+        // Validation d'ordre
         if ((ordre != 'asc' && ordre != 'desc') || ordre == '' || !ordre) {
             ordre = "asc";
         }
@@ -199,6 +199,7 @@ async (req, res) => {
         const film = await db.collection("films").doc(id).get();
         const filmId = film.data();
         
+        // Si le film existe, on doit faire la validation des données
         if (filmId != undefined && film) {
             const filmModifiee = req.body;
 
@@ -209,12 +210,11 @@ async (req, res) => {
                 return res.json({message: "Données non-conforme."});
             }
             
+            // Si est valide, on accepte la modification
             await db.collection("films").doc(id).update(filmModifiee);
         
             res.statusCode = 200;
             res.json({message: "La donnée a été modifiée."})
-
-
         } else {
             res.statusCode = 404;
             res.json({message: "Film non trouvé."});
@@ -225,20 +225,30 @@ async (req, res) => {
     }
 });
 
+
 /**
  * @method DELETE
- * Supprime le film ayant l'identifiant :id de la base de données.
+ * Supprime le film ayant l'identifiant :id de la base de données
  */
 server.delete("/api/films/:id", async (req, res) => {
     try {
         const id = req.params.id;
-        const filmDelete = await db.collection("films").doc(id).delete();
+        const film = await db.collection("films").doc(id).get();
+        const filmDeleteData = film.data();
+
+        //const filmDelete = await db.collection("films").doc(id).delete();
     
-        res.statusCode = 200;
-        res.json({message: `Le document avec l'id ${id} a été supprimé.`});
+        if (filmDeleteData != undefined && film) {    
+            const filmDelete = await db.collection("films").doc(id).delete();
+            res.statusCode = 200;
+            res.json({message: `Le document avec l'id ${id} a été supprimé.`});
+        } else {
+            res.statusCode = 404;
+            res.json({message: "Film non trouvé."});
+        }    
     } catch(e) {
         res.statusCode = 500;
-        res.json({message: "erreur"});
+        res.json({message: "Erreur."});
     }
 });
 
@@ -255,10 +265,28 @@ async (req, res) => {
     try{
         // fazer as validacoes
         const validation = validationResult(req);
-            if (validation.errors.length > 0) {
-                res.statusCode = 400;
-                return res.json({message: "Données non-conforme."});
+        if (validation.errors.length > 0) {
+            for (let i = 0; i < validation.errors.length; i++) {
+                console.log(validation.errors[i].path);
+                errors[i] = validation.errors[i].path;
             }
+
+            // Obter um array com todos os erros. Porem cada campo pode ter mais de um erro e por isos gerara duplicatas
+            console.log(errors);
+            errorsFinale = [];
+
+            for (let i = 0; i < errors.length; i++) {
+                if (errors[i] != errors[i-1]) {
+                    errorsFinale.push(errors[i]);
+                }
+            }
+
+            // Novo array que nao possui duplicatas e ira afficher a mensagem de erros
+            console.log(errorsFinale);
+            res.statusCode = 400;
+            message = (errors.length > 1 ? `Données ${errorsFinale} non-conformees.` : `Donnée ${errorsFinale} non-conforme.`);
+            return res.json({message: message});
+        }
     
         const { courriel , mdp } = req.body;
     
@@ -317,10 +345,6 @@ server.post("/api/utilisateurs/connexion", async (req, res) => {
     
         const utilisateurAValider = utilisateurs[0];
     
-        // MAIS TARDE : On encrypte le mot de passe
-    
-        // On compare
-        // Si pas pareil, erreur
         if (utilisateurAValider.mdp !== mdp) {
             res.statusCode = 400;
             return res.json({message: "Mot de passe invalide."});
@@ -335,7 +359,6 @@ server.post("/api/utilisateurs/connexion", async (req, res) => {
         res.json({message: "Erreur."});
     }
 });
-
 
 
 // Gestion page 404 - requete non trouvee

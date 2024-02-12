@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>API - Films</title>
     <link rel="stylesheet" href="assets/css/styles.css
     ">
 </head>
@@ -39,7 +39,7 @@
         <li><strong>POST /api/films : </strong>
             <p>Ajoute un nouveau film à la base de données. Le corps de la requête doit contenir les informations du
                 film à ajouter.</p>
-            <p>Voici un exemple de comment ajouter un film de manière appropriée dans le système :</p>
+            <p>Voici un model de données pour ajouter un film de manière appropriée dans le système :</p>
             <p>
                 {
             </p>
@@ -64,8 +64,44 @@
             <p>
                 }
             </p>
+            <p>Notre système effectuera des validations des champs pour s'assurer que tout est bien formaté, et des
+                messages d'erreur seront renvoyés si vos actions ne sont pas exécutées. L'id du filme ajouté sera
+                retourné.
+            <p>
+                Vous pourrez insérer plus d'informations si nécessaire, comme des commentaires par exemple.
+            </p>
+        </li>
+        <li><strong>DELETE /api/films/:id </strong>
+            <p>Supprime le film ayant l'identifiant :id de la base de données.</p>
         </li>
     </ul>
+    <h3>Utilisateurs</h3>
+    <ul>
+        <li><strong>POST /api/utilisateurs/inscription : </strong>
+            <p>Ajoute un nouvel utilisateur à la base de données. Le corps de la requête doit contenir les informations
+                de l'utilisateur à ajouter.</p>
+            <p>Votre mot de passe doit contenir au moins 8 caractères, avec au moins une lettre majuscule, une lettre
+                minuscule, un chiffre et un caractère spécial.</p>
+            <p>Voici un model de données pour faire l'inscription d'un utilisateur de manière appropriée dans le système
+                :</p>
+            <p>
+                {
+            </p>
+            <p>
+                "courriel": "utilisateur@gmail.com",
+            </p>
+            <p>
+                "mdp": "123456aA!"
+            </p>
+            <p>
+                }
+            </p>
+        </li>
+        <li><strong>POST /api/utilisateurs/connexion : </strong>
+            <p>Connecte un utilisateur en vérifiant les informations fournies dans le corps de la requête.</p>
+        </li>
+    </ul>
+
 </body>
 
 </html>
