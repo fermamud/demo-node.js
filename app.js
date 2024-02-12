@@ -74,15 +74,16 @@ server.get("/api/films", async (req, res) => {
         // Definition de ordre par default asc
         let ordre = req.query["ordre"] || 'asc';
 
-        // Validation d'ordre
+        // Validation de l'ordre
         if ((ordre != 'asc' && ordre != 'desc') || ordre == '' || !ordre) {
             ordre = "asc";
         }
 
         const donneesRef = await db.collection("films").orderBy(tri, ordre).get();
-        
-        const donneesFinale = [];
 
+        // Tableau finale avec les films
+        const donneesFinale = [];
+        
         donneesRef.forEach((doc) => {
             donneesFinale.push(doc.data());
         });
@@ -138,7 +139,6 @@ async (req, res) => {
     try {
         // Après avoir validé chaque champ saisi par l'utilisateur, le code vérifie s'il y a eu des échecs de validation
         const validation = validationResult(req);
-        console.log(validation);
         if (validation.errors.length > 0) {
             res.statusCode = 400;
             return res.json({message: "Données non-conforme."});
@@ -151,7 +151,6 @@ async (req, res) => {
 
         // Avant d'insérer le film saisi par l'utilisateur, le code vérifie si le titre existe déjà dans la base de données
         const filmExisteDeja = await db.collection("films").where("titre", "==", filmTitre).get(); 
-        console.log(filmExisteDeja);
 
         // Si le titre existe déjà
         if (!filmExisteDeja.empty) {
@@ -164,15 +163,6 @@ async (req, res) => {
 
         res.statusCode = 200;
         res.json({ message: `Le film avec l'id ${nouveauFilm.id} a été ajouté.` });
-
-        // {
-        //     "titre": "test",
-        //     "genres": ["tes"],
-        //     "description": "test",
-        //     "annee": "2016",
-        //     "realisation": "Test",
-        //     "titreVignette": "test.jpg"
-        // }
     } catch (e) {
         res.statusCode = 500;
         res.json({message: "Notre système n'a pas pu insérer les données envoyées."});
@@ -204,7 +194,6 @@ async (req, res) => {
             const filmModifiee = req.body;
 
             const validation = validationResult(req);
-            console.log(validation);
             if (validation.errors.length > 0) {
                 res.statusCode = 400;
                 return res.json({message: "Données non-conforme."});
@@ -235,8 +224,6 @@ server.delete("/api/films/:id", async (req, res) => {
         const id = req.params.id;
         const film = await db.collection("films").doc(id).get();
         const filmDeleteData = film.data();
-
-        //const filmDelete = await db.collection("films").doc(id).delete();
     
         if (filmDeleteData != undefined && film) {    
             const filmDelete = await db.collection("films").doc(id).delete();
@@ -254,7 +241,7 @@ server.delete("/api/films/:id", async (req, res) => {
 
 /**
  * @method POST
- * Ajoute un nouvel utilisateur
+ * Ajouter un nouvel utilisateur
  */
 server.post("/api/utilisateurs/inscription",
 [
@@ -263,29 +250,11 @@ server.post("/api/utilisateurs/inscription",
 ],
 async (req, res) => {
     try{
-        // fazer as validacoes
+        // Validation
         const validation = validationResult(req);
         if (validation.errors.length > 0) {
-            for (let i = 0; i < validation.errors.length; i++) {
-                console.log(validation.errors[i].path);
-                errors[i] = validation.errors[i].path;
-            }
-
-            // Obter um array com todos os erros. Porem cada campo pode ter mais de um erro e por isos gerara duplicatas
-            console.log(errors);
-            errorsFinale = [];
-
-            for (let i = 0; i < errors.length; i++) {
-                if (errors[i] != errors[i-1]) {
-                    errorsFinale.push(errors[i]);
-                }
-            }
-
-            // Novo array que nao possui duplicatas e ira afficher a mensagem de erros
-            console.log(errorsFinale);
             res.statusCode = 400;
-            message = (errors.length > 1 ? `Données ${errorsFinale} non-conformees.` : `Donnée ${errorsFinale} non-conforme.`);
-            return res.json({message: message});
+            return res.json({message: "Données non-conforme."});
         }
     
         const { courriel , mdp } = req.body;
@@ -296,8 +265,8 @@ async (req, res) => {
         docRef.forEach((doc) => {
             utilisateurs.push(doc.data());
         });
-        console.log(utilisateurs);
     
+        // Assurrer que le courriel n'existe pas dans la BD
         if (utilisateurs.length > 0) {
             res.statusCode = 400;
             return res.json({message: "Le courriel existe déja dans notre système."});
@@ -306,8 +275,8 @@ async (req, res) => {
         const utilisateur = { courriel, mdp };
         const nouvelUtilisateur = await db.collection("utilisateurs").add(utilisateur);
     
+        // Retourner la message sans le mot de passe
         delete utilisateur.mdp;
-        console.log(nouvelUtilisateur);
     
         res.statusCode = 200;
         res.json({ message: `L'utilisateur avec l'id ${nouvelUtilisateur.id} a été ajouté.` });
@@ -324,21 +293,17 @@ async (req, res) => {
  */
 server.post("/api/utilisateurs/connexion", async (req, res) => {
     try {
-        // On recupere les infos du body
         const { courriel , mdp } = req.body;
     
-        // On verifie si le courriel existe
+        // Verifier si le courriel existe
         const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
         const utilisateurs = [];
     
         docRef.forEach((doc) => {
             utilisateurs.push(doc.data());
         });
-        console.log(utilisateurs);
     
-        // Si non, erreur,
         if (utilisateurs.length == 0) {
-            // A pessoa fez uma demanda errada
             res.statusCode = 400;
             return res.json({message: "Courriel invalide."});
         }
@@ -350,7 +315,7 @@ server.post("/api/utilisateurs/connexion", async (req, res) => {
             return res.json({message: "Mot de passe invalide."});
         }
     
-        // On retourne les infos de l'utilisateur sans le mot de passe
+        // Retourner les infos de l'utilisateur sans le mot de passe
         res.statusCode = 200;
         delete utilisateurAValider.mdp;
         res.json({message: `Connexion établie avec l'utilisateur ${utilisateurAValider.courriel}.`});
