@@ -8,6 +8,7 @@ const path = require("path");
 const mustacheExpress = require("mustache-express");
 const db = require("./config/db.js")
 const { check, validationResult } = require("express-validator");
+const { error } = require("console");
 
 
 // Au debut du fichier
@@ -147,12 +148,34 @@ server.post("/utilisateurs/inscription", [
         check("courriel").escape().trim().notEmpty().isEmail().normalizeEmail(),
         check("mdp").escape().trim().notEmpty().isLength({min:8, max:20}).isStrongPassword({minLength:8, minLowercase:1, minNumbers:1, minUppercase:1, minSymbols:1})
     ], async (req, res) => {
-    // On recupere les infos du body
+        // On recupere les infos du body
         const validation = validationResult(req);
+        // console.log(validation);
+        // console.log(validation.errors[0].path);
+        const errors = [];
         if (validation.errors.length > 0) {
+            for (let i = 0; i < validation.errors.length; i++) {
+                console.log(validation.errors[i].path);
+                errors[i] = validation.errors[i].path;
+            }
+
+            // Obter um array com todos os erros. Porem cada campo pode ter mais de um erro e por isos gerara duplicatas
+            console.log(errors);
+            errorsFinale = [];
+
+            for (let i = 0; i < errors.length; i++) {
+                if (errors[i] != errors[i -1]) {
+                    errorsFinale.push(errors[i]);
+                }
+            }
+
+            // Novo array que nao possui duplicatas e ira afficher a mensagem de erros
+            console.log(errorsFinale);
             res.statusCode = 400;
-            return res.json({message: "Données non-conforme."});
+            message = (errors.length > 1 ? `Données ${errorsFinale} non-conformees.` : `Donnée ${errorsFinale} non-conforme.`);
+            return res.json({message: message});
         }
+
     // Modo mais longo
     // const courriel = req.body.courriel;
     // const mdp = req.body.mdp;
@@ -242,4 +265,17 @@ server.use((req, res) => {
 server.listen(process.env.PORT, () => {
     console.log("Le serveur a démarré.")
 });
+
+
+// Validacoes para os filmes
+// nao esquecer o opcional na edicao
+// titulo : string, nao esta vazio, exists?, 
+// genres : exists?, 
+// description : exists?
+// annee : exists?, é data 
+// realisation : exists?
+// titreVignette : exists?
+// 
+//
+
 
