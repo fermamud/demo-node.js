@@ -87,7 +87,11 @@ server.get("/api/films", async (req, res) => {
         const donneesFinale = [];
         
         donneesRef.forEach((doc) => {
-            donneesFinale.push(doc.data());
+            const donneesAjouter = doc.data();
+            donneesAjouter.id = doc.id;
+
+            // donneesFinale.push(doc.data());
+            donneesFinale.push(donneesAjouter);
         });
 
         res.statusCode = 200;
