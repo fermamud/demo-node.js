@@ -10,6 +10,7 @@ const db = require("./config/db.js")
 const { check, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const auth = require("./middlewares/auth.js");
 
 
 // Au debut du fichier
@@ -128,7 +129,7 @@ server.post("/donnees", async (req, res) => {
 /**
  * @method DELETE
  */
-server.delete("/donnees/:id", async (req, res) => {
+server.delete("/donnees/:id", auth, async (req, res) => {
     const id = req.params.id;
 
     const resultat = await db.collection("test").doc(id).delete();
@@ -174,7 +175,7 @@ server.post("/utilisateurs/inscription", [
     const utilisateurs = [];
 
     docRef.forEach((doc) => {
-        utilisateurs.push(doc.data());
+        utilisateurs.push({ id: doc.id, ...doc.data() });
     });
     console.log(utilisateurs);
     
