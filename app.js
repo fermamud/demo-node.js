@@ -9,6 +9,7 @@ const mustacheExpress = require("mustache-express");
 const db = require("./config/db.js")
 const { check, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 
 // Au debut du fichier
@@ -211,7 +212,7 @@ server.post("/utilisateurs/connexion", async (req, res) => {
     // On verifie si le courriel existe
     const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
     const utilisateurs = [];
-
+    
     docRef.forEach((doc) => {
         utilisateurs.push(doc.data());
     });
@@ -235,13 +236,27 @@ server.post("/utilisateurs/connexion", async (req, res) => {
         return res.json({message: "Mot de passe invalide."});
     }
 
-    // On retourne les infos de l'utilisateur sans le mot de passe
-    res.statusCode = 200;
-    delete utilisateurAValider.mdp;
-    res.json(utilisateurAValider);
+    // Generer un jeton
+    const donnesJeton = {
+        courriel: utilisateurAValider.courriel,
+        id: utilisateurAValider.id,
+    };
 
-    // Bom para testar se estamos entrando aqui
-    // res.json("legume");
+    const options = {
+        expiresIn: "1d",
+    };
+
+    const jeton = jwt.sign(
+        donnesJeton,
+        process.env.JWT_SECRET,
+        options
+    );
+
+    res.statusCode = 200;
+    // On retourne les infos de l'utilisateur sans le mot de passe
+    delete utilisateurAValider.mdp;
+    res.json(jeton);
+    // res.json(utilisateurAValider);
 });
 
 // Doit etre la derniere !!
