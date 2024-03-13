@@ -8,6 +8,9 @@ const mustacheExpress = require("mustache-express");
 const cors = require("cors");
 const db = require("./config/db.js");
 const { check, validationResult } = require("express-validator");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const auth = require("./middlewares/auth.js");
 
 // Configurations
 dotenv.config();
@@ -225,7 +228,7 @@ async (req, res) => {
  * @method DELETE
  * Supprime le film ayant l'identifiant :id de la base de données
  */
-server.delete("/api/films/:id", async (req, res) => {
+server.delete("/api/films/:id", auth, async (req, res) => {
     try {
         const id = req.params.id;
         const film = await db.collection("films").doc(id).get();
@@ -263,29 +266,29 @@ async (req, res) => {
             return res.json({message: "Données non-conforme."});
         }
     
-        const { courriel , mdp } = req.body;
+        const motDePasse = req.body.mdp;
+        const courriel = req.body.courriel;
     
         const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
         const utilisateurs = [];
     
         docRef.forEach((doc) => {
-            utilisateurs.push(doc.data());
+            utilisateurs.push({ id: doc.id, ...doc.data() });
         });
     
         // Assurrer que le courriel n'existe pas dans la BD
         if (utilisateurs.length > 0) {
             res.statusCode = 400;
             return res.json({message: "Le courriel existe déja dans notre système."});
+        } else {
+            const hash = await bcrypt.hash(motDePasse, 10);
+            const utilisateur = { courriel, mdp: hash };
+            const doc = await db.collection("utilisateurs").add(utilisateur);
+            utilisateur.id = doc.id;
+            res.statusCode = 200;
+            res.json({ message: `L'utilisateur avec l'id ${utilisateur.id} a été ajouté.` });
         }
     
-        const utilisateur = { courriel, mdp };
-        const nouvelUtilisateur = await db.collection("utilisateurs").add(utilisateur);
-    
-        // Retourner la message sans le mot de passe
-        delete utilisateur.mdp;
-    
-        res.statusCode = 200;
-        res.json({ message: `L'utilisateur avec l'id ${nouvelUtilisateur.id} a été ajouté.` });
     } catch (e) {
         res.statusCode = 500;
         res.json({message: "Notre système n'a pas pu insérer les données envoyées."});
@@ -299,32 +302,51 @@ async (req, res) => {
  */
 server.post("/api/utilisateurs/connexion", async (req, res) => {
     try {
-        const { courriel , mdp } = req.body;
+        const motDePasse = req.body.mdp;
+        const courriel = req.body.courriel;
     
         // Verifier si le courriel existe
         const docRef = await db.collection("utilisateurs").where("courriel", "==", courriel).get();
         const utilisateurs = [];
     
         docRef.forEach((doc) => {
-            utilisateurs.push(doc.data());
+            utilisateurs.push({ id: doc.id, ...doc.data() });
         });
     
-        if (utilisateurs.length == 0) {
+        const utilisateurAValider = utilisateurs[0];
+
+        if (utilisateurAValider === undefined) {
             res.statusCode = 400;
             return res.json({message: "Courriel invalide."});
+        } else {
+            const resultatConnexion = await bcrypt.compare(motDePasse, utilisateurAValider.mdp);
+
+            if (resultatConnexion) {
+                // Generer un jeton
+                const donnesJeton = {
+                    courriel: utilisateurAValider.courriel,
+                    id: utilisateurAValider.id,
+                };
+
+                const options = {
+                    expiresIn: "1d",
+                };
+
+                const jeton = jwt.sign(
+                    donnesJeton,
+                    process.env.JWT_SECRET,
+                    options
+                );
+
+                res.statusCode = 200;
+                // On retourne les infos de l'utilisateur sans le mot de passe
+                delete utilisateurAValider.mdp;
+                res.json(jeton);
+            } else {
+                res.statusCode = 400;
+                return res.json({message: "Mot de passe invalide."});
+            }
         }
-    
-        const utilisateurAValider = utilisateurs[0];
-    
-        if (utilisateurAValider.mdp !== mdp) {
-            res.statusCode = 400;
-            return res.json({message: "Mot de passe invalide."});
-        }
-    
-        // Retourner les infos de l'utilisateur sans le mot de passe
-        res.statusCode = 200;
-        delete utilisateurAValider.mdp;
-        res.json({message: `Connexion établie avec l'utilisateur ${utilisateurAValider.courriel}.`});
     } catch (e) {
         res.statusCode = 500;
         res.json({message: "Erreur."});
