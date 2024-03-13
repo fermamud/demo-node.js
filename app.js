@@ -225,7 +225,7 @@ async (req, res) => {
  * @method DELETE
  * Supprime le film ayant l'identifiant :id de la base de données
  */
-server.delete("/api/films/:idgit status", async (req, res) => {
+server.delete("/api/films/:id", async (req, res) => {
     try {
         const id = req.params.id;
         const film = await db.collection("films").doc(id).get();
